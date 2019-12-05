@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as glob from 'glob';
 import * as which from 'which';
 import * as shell_quote from 'shell-quote';
-import { dirname } from 'path';
+import { dirname, posix, win32 } from 'path';
 
 let lastEntry: string = '';
 
@@ -238,11 +238,16 @@ function executeCommand(name: string, args: string[], inputText: string, options
             let prependArgs;
             let cwd = options['cwd'];
             // invoke bash with "-l" (--login) option.  This is needed for Cygwin where the Cygwin's C:/cygwin/bin path may exist in PATH only after --login.
-            if (cwd != null)
-                prependArgs = ['-lc', 'cd "$1"; shift; "$@"', 'bash', cwd, name]; // set current working directory after bash's --login (-l)
-            else
-                prependArgs = ['-lc', '"$@"', 'bash', name]; // 'bash' at "$0" is the program name for stderr messages' labels.
-            run(bashPath, prependArgs.concat(args), resolve);
+            if (cwd != null) {
+                // prependArgs = ['-lc', 'cd "$1"; shift; "$@"', 'bash', cwd, name]; // set current working directory after bash's --login (-l)
+                // const norpath = cwd.replace(new RegExp("\\" + win32.sep, "g"), posix.sep)
+                // prependArgs = ['-lc', `cd ${norpath}; $0 $@`]; // set current working directory after bash's --login (-l)
+                prependArgs = ['-lc']; // set current working directory after bash's --login (-l)
+            } else {
+                prependArgs = ['-lc', '"$@"', 'bash']; // 'bash' at "$0" is the program name for stderr messages' labels.
+            }
+            const bashArgs = [...prependArgs, [name, ...args].join(" ")];
+            run(bashPath, bashArgs, resolve);
         }
     });
 }
